@@ -5,16 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 )
 
 type hueActions interface {
-	GetBridgeIPAddress() error
-	GetUserID() error
-	GetBaseURL()
-	GetLights() error
+	initializeHue() error
+	getBridgeIPAddress() error
+	getUserID() error
+	getBaseURL()
+	GetLights(rw http.ResponseWriter, r *http.Request)
 	ChangeLightState() error
 }
 
@@ -84,7 +86,31 @@ type hueLight struct {
 
 const hueDiscoveryURL = "https://discovery.meethue.com/"
 
-func (h *Hue) GetBridgeIPAddress() error {
+func (h *Hue) initializeHue() error {
+	var err error
+
+	if h.internalIPAddress == "" {
+		err = h.getBridgeIPAddress()
+		if err != nil {
+			return fmt.Errorf("GetBridgeIPAddress Error: %s", err)
+		}
+	}
+
+	if h.userID == "" {
+		err = h.getUserID()
+		if err != nil {
+			return fmt.Errorf("GetUserID Error: %s", err)
+		}
+	}
+
+	if h.baseURL == "" {
+		h.getBaseURL()
+	}
+
+	return nil
+}
+
+func (h *Hue) getBridgeIPAddress() error {
 	resp, err := http.Get(hueDiscoveryURL)
 	if err != nil {
 		return err
@@ -108,7 +134,7 @@ func (h *Hue) GetBridgeIPAddress() error {
 	return nil
 }
 
-func (h *Hue) GetUserID() error {
+func (h *Hue) getUserID() error {
 	val, ok := os.LookupEnv("hueUserID")
 	if ok {
 		h.userID = val
@@ -120,19 +146,33 @@ func (h *Hue) GetUserID() error {
 	}
 }
 
-func (h *Hue) GetBaseURL() {
+func (h *Hue) getBaseURL() {
 	h.baseURL = fmt.Sprintf("http://%s/api/%s/lights/", h.internalIPAddress, h.userID)
 }
 
-func (h *Hue) GetLights() error {
+func (h *Hue) GetLights(rw http.ResponseWriter, r *http.Request) {
+	err := h.initializeHue()
+	if err != nil {
+		log.Printf("ERROR: %s", err)
+		rw.WriteHeader(500)
+		rw.Write([]byte(fmt.Sprintf("ERROR: %s", err)))
+		return
+	}
+
 	resp, err := http.Get(h.baseURL)
 	if err != nil {
-		return err
+		log.Printf("ERROR: %s", err)
+		rw.WriteHeader(500)
+		rw.Write([]byte(fmt.Sprintf("ERROR: %s", err)))
+		return
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		log.Printf("ERROR: %s", err)
+		rw.WriteHeader(500)
+		rw.Write([]byte(fmt.Sprintf("ERROR: %s", err)))
+		return
 	}
 
 	fullResponse := string(body)
@@ -156,7 +196,10 @@ func (h *Hue) GetLights() error {
 
 					err = json.Unmarshal([]byte(tmpArray[0]), &light)
 					if err != nil {
-						return err
+						log.Printf("ERROR: %s", err)
+						rw.WriteHeader(500)
+						rw.Write([]byte(fmt.Sprintf("ERROR: %s", err)))
+						return
 					}
 
 					h.Lights = append(h.Lights, light)
@@ -175,7 +218,10 @@ func (h *Hue) GetLights() error {
 
 				err = json.Unmarshal([]byte(tmpArray[0]), &light)
 				if err != nil {
-					return err
+					log.Printf("ERROR: %s", err)
+					rw.WriteHeader(500)
+					rw.Write([]byte(fmt.Sprintf("ERROR: %s", err)))
+					return
 				}
 
 				h.Lights = append(h.Lights, light)
@@ -187,7 +233,8 @@ func (h *Hue) GetLights() error {
 		}
 	}
 
-	return nil
+	rw.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(rw).Encode(h.Lights)
 }
 
 func (h *Hue) ChangeLightState(light int, property, value string) error {

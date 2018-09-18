@@ -1,39 +1,55 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/mattvella07/smart-home-control/phillips"
 )
 
-func main() {
+func healthCheck(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "text/html")
+	rw.Write([]byte("Success"))
+}
+
+func createServer() {
 	var hue phillips.Hue
 
-	err := hue.GetBridgeIPAddress()
-	if err != nil {
-		log.Fatalf("GetBridgeIPAddress Error: %s", err)
-	}
+	http.HandleFunc("/", healthCheck)
+	http.HandleFunc("/api/hue/getLights", hue.GetLights)
 
-	err = hue.GetUserID()
-	if err != nil {
-		log.Fatalf("GetUserID Error: %s", err)
-	}
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
 
-	hue.GetBaseURL()
+func main() {
+	createServer()
 
-	err = hue.GetLights()
-	if err != nil {
-		log.Fatalf("GetLights Error: %s", err)
-	}
+	// var hue phillips.Hue
 
-	fmt.Println("Phillips Hue:")
-	for _, light := range hue.Lights {
-		fmt.Println(light.Name)
-	}
+	// err := hue.GetBridgeIPAddress()
+	// if err != nil {
+	// 	log.Fatalf("GetBridgeIPAddress Error: %s", err)
+	// }
 
-	err = hue.ChangeLightState(4, "on", "false")
-	if err != nil {
-		log.Fatalf("ChangeLightState Error: %s", err)
-	}
+	// err = hue.GetUserID()
+	// if err != nil {
+	// 	log.Fatalf("GetUserID Error: %s", err)
+	// }
+
+	// hue.GetBaseURL()
+
+	// err = hue.GetLights()
+	// if err != nil {
+	// 	log.Fatalf("GetLights Error: %s", err)
+	// }
+
+	// fmt.Println("Phillips Hue:")
+	// for _, light := range hue.Lights {
+	// 	fmt.Println(light.Name)
+	// }
+
+	// err = hue.ChangeLightState(4, "on", "false")
+	// if err != nil {
+	// 	log.Fatalf("ChangeLightState Error: %s", err)
+	// }
 }
