@@ -11,15 +11,6 @@ import (
 	"strings"
 )
 
-type hueActions interface {
-	initializeHue() error
-	getBridgeIPAddress() error
-	getUserID() error
-	getBaseURL()
-	GetLights(rw http.ResponseWriter, r *http.Request)
-	ChangeLightState() error
-}
-
 type Hue struct {
 	discoveryResponse []hueDiscoveryResponse
 	internalIPAddress string
