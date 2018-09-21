@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -228,18 +229,72 @@ func (h *Hue) GetLights(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(h.Lights)
 }
 
-func (h *Hue) ChangeLightState(light int, property, value string) error {
+func (h *Hue) changeLightState(light int, property, value string) error {
+	err := h.initializeHue()
+	if err != nil {
+		log.Printf("ERROR: %s", err)
+		return err
+	}
+
 	client := &http.Client{}
 	body := strings.NewReader(fmt.Sprintf("{\"%s\":%s}", property, value))
 	req, err := http.NewRequest("PUT", fmt.Sprintf("%s%d/state", h.baseURL, light), body)
 	if err != nil {
+		log.Printf("ERROR: %s", err)
 		return err
 	}
 
 	res, err := client.Do(req)
 	if err != nil {
+		log.Printf("ERROR: %s", err)
 		return err
 	}
 	defer res.Body.Close()
 	return nil
+}
+
+func (h *Hue) TurnOnLight(rw http.ResponseWriter, r *http.Request) {
+	params := strings.Split(strings.Replace(r.URL.String(), "/api/hue/turnOnLight/", "", 1), "/")
+
+	rw.Header().Set("Content-Type", "text/html")
+
+	if len(params) > 0 {
+		if light, err := strconv.Atoi(params[0]); err == nil {
+			err = h.changeLightState(light, "on", "true")
+			if err != nil {
+				rw.WriteHeader(500)
+				rw.Write([]byte(err.Error()))
+				return
+			}
+
+			rw.Write([]byte("Success"))
+			return
+		}
+	}
+
+	rw.WriteHeader(500)
+	rw.Write([]byte("Error turning on light"))
+}
+
+func (h *Hue) TurnOffLight(rw http.ResponseWriter, r *http.Request) {
+	params := strings.Split(strings.Replace(r.URL.String(), "/api/hue/turnOffLight/", "", 1), "/")
+
+	rw.Header().Set("Content-Type", "text/html")
+
+	if len(params) > 0 {
+		if light, err := strconv.Atoi(params[0]); err == nil {
+			err = h.changeLightState(light, "on", "false")
+			if err != nil {
+				rw.WriteHeader(500)
+				rw.Write([]byte(err.Error()))
+				return
+			}
+
+			rw.Write([]byte("Success"))
+			return
+		}
+	}
+
+	rw.WriteHeader(500)
+	rw.Write([]byte("Error turning off light"))
 }
