@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/mattvella07/smart-home-control/phillips"
+	"github.com/mattvella07/smart-home-control/api"
 )
 
 func healthCheck(rw http.ResponseWriter, r *http.Request) {
@@ -13,12 +13,10 @@ func healthCheck(rw http.ResponseWriter, r *http.Request) {
 }
 
 func createServer() {
-	var hue phillips.Hue
-
 	http.HandleFunc("/", healthCheck)
-	http.HandleFunc("/api/hue/getLights", hue.GetLights)
-	http.HandleFunc("/api/hue/turnOnLight/", hue.TurnOnLight)
-	http.HandleFunc("/api/hue/turnOffLight/", hue.TurnOffLight)
+	http.HandleFunc("/api/hue/getLights", api.GetLights)
+	http.HandleFunc("/api/hue/turnOnLight/", api.TurnOnLight)
+	http.HandleFunc("/api/hue/turnOffLight/", api.TurnOffLight)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
