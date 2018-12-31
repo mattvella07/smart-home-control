@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -12,7 +13,9 @@ import (
 )
 
 func GetLights(rw http.ResponseWriter, r *http.Request) {
-	var h hue.Connection
+	h := hue.Connection{
+		UserID: os.Getenv("hueUserID"),
+	}
 
 	lights, err := h.GetLights()
 	if err != nil {
@@ -38,9 +41,41 @@ func TurnOnLight(rw http.ResponseWriter, r *http.Request) {
 
 	if len(params) > 0 {
 		if light, err := strconv.Atoi(params[0]); err == nil {
-			var h hue.Connection
+			h := hue.Connection{
+				UserID: os.Getenv("hueUserID"),
+			}
 
-			err = h.TurnOnLight(light)
+			x, err := strconv.ParseFloat(r.URL.Query().Get("x"), 32)
+			if err != nil {
+				x = 0.0
+			}
+
+			y, err := strconv.ParseFloat(r.URL.Query().Get("y"), 32)
+			if err != nil {
+				y = 0.0
+			}
+
+			bri, err := strconv.Atoi(r.URL.Query().Get("bri"))
+			if err != nil {
+				bri = 0
+			}
+
+			hue, err := strconv.Atoi(r.URL.Query().Get("hue"))
+			if err != nil {
+				hue = 0
+			}
+
+			sat, err := strconv.Atoi(r.URL.Query().Get("sat"))
+			if err != nil {
+				sat = 0
+			}
+
+			if x == 0.0 && y == 0.0 && bri == 0 && hue == 0 && sat == 0 {
+				err = h.TurnOnLight(light)
+			} else {
+				err = h.TurnOnLightWithColor(light, float32(x), float32(y), bri, hue, sat)
+			}
+
 			if err != nil {
 				rw.WriteHeader(500)
 				rw.Write([]byte(err.Error()))
@@ -68,7 +103,9 @@ func TurnOffLight(rw http.ResponseWriter, r *http.Request) {
 
 	if len(params) > 0 {
 		if light, err := strconv.Atoi(params[0]); err == nil {
-			var h hue.Connection
+			h := hue.Connection{
+				UserID: os.Getenv("hueUserID"),
+			}
 
 			err = h.TurnOffLight(light)
 			if err != nil {
