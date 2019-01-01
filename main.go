@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/mattvella07/smart-home-control/api"
+	"github.com/mattvella07/smart-home-control/middleware"
 )
 
 func healthCheck(rw http.ResponseWriter, r *http.Request) {
@@ -13,10 +14,15 @@ func healthCheck(rw http.ResponseWriter, r *http.Request) {
 }
 
 func createServer() {
-	http.HandleFunc("/", healthCheck)
-	http.HandleFunc("/api/hue/getLights", api.GetLights)
-	http.HandleFunc("/api/hue/turnOnLight/", api.TurnOnLight)
-	http.HandleFunc("/api/hue/turnOffLight/", api.TurnOffLight)
+	m := middleware.Method{}
+
+	m.Allowed = []string{"GET"}
+	http.Handle("/", m.MethodChecker(http.HandlerFunc(healthCheck)))
+	http.Handle("/api/hue/getLights", m.MethodChecker(http.HandlerFunc(api.GetLights)))
+
+	m.Allowed = []string{"POST"}
+	http.Handle("/api/hue/turnOnLight/", m.MethodChecker(http.HandlerFunc(api.TurnOnLight)))
+	http.Handle("/api/hue/turnOffLight/", m.MethodChecker(http.HandlerFunc(api.TurnOffLight)))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

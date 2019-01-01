@@ -12,6 +12,7 @@ import (
 	"github.com/mattvella07/hue"
 )
 
+// GetLights returns all Phillips Hue lights
 func GetLights(rw http.ResponseWriter, r *http.Request) {
 	h := hue.Connection{
 		UserID: os.Getenv("hueUserID"),
@@ -29,6 +30,8 @@ func GetLights(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(lights)
 }
 
+// TurnOnLight turns on the specified Phillips Hue light
+// and sets the color if the parameters are supplied
 func TurnOnLight(rw http.ResponseWriter, r *http.Request) {
 	reqURL := r.URL.String()
 	if strings.Index(reqURL, "?") > -1 {
@@ -91,6 +94,7 @@ func TurnOnLight(rw http.ResponseWriter, r *http.Request) {
 	rw.Write([]byte("Error turning on light"))
 }
 
+// TurnOffLight turns off the specified Phillips Hue light
 func TurnOffLight(rw http.ResponseWriter, r *http.Request) {
 	reqURL := r.URL.String()
 	if strings.Index(reqURL, "?") > -1 {
