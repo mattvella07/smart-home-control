@@ -25,3 +25,7 @@ func (m Method) MethodChecker(next http.Handler) http.Handler {
 		rw.Write([]byte(fmt.Sprintf("HTTP request method must be one of the following %s for %s", m.Allowed, r.URL.String())))
 	})
 }
+
+// Check for required parameters
+
+// Check for allow parameters
